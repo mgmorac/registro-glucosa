@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Mi registro de glucosa</title>
+<style>
+:root{--bg:#f6f7f9;--card:#fff;--tx:#1b1f24;--mu:#667085;--bd:#e3e6eb;--ok:#168a4a;--okb:#e3f6ec;--hi:#c2410c;--hib:#ffedd5;--lo:#b42318;--lob:#fee4e2;--ac:#2563eb;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f1216;--card:#181c22;--tx:#eef0f3;--mu:#9aa3b0;--bd:#2a3039;--ok:#4ade80;--okb:#12301f;--hi:#fb923c;--hib:#3a2312;--lo:#f87171;--lob:#3d1715;--ac:#60a5fa;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0f1216;--card:#181c22;--tx:#eef0f3;--mu:#9aa3b0;--bd:#2a3039;--ok:#4ade80;--okb:#12301f;--hi:#fb923c;--hib:#3a2312;--lo:#f87171;--lob:#3d1715;--ac:#60a5fa;color-scheme:dark}
+*{box-sizing:border-box}html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+main{max-width:640px;margin:0 auto;padding:16px;display:grid;gap:14px}
+h1{font-size:22px;margin:4px 0 0}h2{font-size:15px;margin:0 0 10px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:14px}
+label{display:block;font-size:13px;color:var(--mu);margin-bottom:4px}
+input,select{width:100%;padding:10px;border-radius:10px;border:1px solid var(--bd);background:var(--bg);color:var(--tx);font:inherit}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+button{font:inherit;border:0;border-radius:10px;padding:11px 14px;background:var(--ac);color:#fff;font-weight:600;cursor:pointer;width:100%}
+button.g{background:transparent;color:var(--mu);width:auto;padding:4px 8px;font-weight:400}
+#alert{display:none;border-radius:14px;padding:14px;font-weight:600}
+#alert.lo{display:block;background:var(--lob);color:var(--lo)}#alert.hi{display:block;background:var(--hib);color:var(--hi)}#alert.ok{display:block;background:var(--okb);color:var(--ok)}
+#alert small{display:block;font-weight:400;margin-top:4px}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;text-align:center}
+.stats b{display:block;font-size:22px}.stats span{font-size:12px;color:var(--mu)}
+.item{display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--bd)}
+.item:first-child{border-top:0}.v{font-size:20px;font-weight:700;min-width:58px}
+.m{flex:1;font-size:13px;color:var(--mu)}
+.b{font-size:12px;padding:3px 8px;border-radius:99px;font-weight:600}
+.b.ok{background:var(--okb);color:var(--ok)}.b.hi{background:var(--hib);color:var(--hi)}.b.lo{background:var(--lob);color:var(--lo)}
+.wrap{overflow-x:auto}svg{width:100%;height:auto;display:block}
+.note{font-size:12px;color:var(--mu)}
+</style>
+</head>
+<body>
+<main>
+<h1>🩸 Mi registro de glucosa</h1>
+<div id="alert"></div>
+
+<section class="card">
+<h2>Nueva medición</h2>
+<div class="row">
+<div><label for="val">Glucosa (mg/dL)</label><input id="val" type="number" inputmode="numeric" min="10" max="800" placeholder="Ej. 95"></div>
+<div><label for="ctx">Momento</label>
+<select id="ctx"><option value="ayunas">En ayunas</option><option value="antes">Antes de comer</option><option value="despues">2 h después de comer</option><option value="dormir">Antes de dormir</option><option value="otro">Otro</option></select></div>
+</div>
+<div class="row">
+<div><label for="dt">Fecha y hora</label><input id="dt" type="datetime-local"></div>
+<div><label for="nt">Nota (opcional)</label><input id="nt" type="text" maxlength="80" placeholder="Comida, ejercicio…"></div>
+</div>
+<button id="add">Guardar medición</button>
+</section>
+
+<section class="card"><h2>Resumen (últimos 7 días)</h2>
+<div class="stats"><div><b id="avg">–</b><span>Promedio mg/dL</span></div><div><b id="inr">–</b><span>En rango</span></div><div><b id="cnt">0</b><span>Mediciones</span></div></div></section>
+
+<section class="card"><h2>Tendencia</h2><div class="wrap"><svg id="chart" viewBox="0 0 600 180" role="img" aria-label="Gráfica de glucosa"></svg></div></section>
+
+<section class="card"><h2>Historial</h2><div id="list"></div></section>
+
+<section class="card"><h2>Rangos de alerta (mg/dL)</h2>
+<div class="row"><div><label>Ayunas / antes de comer: mín.</label><input id="preMin" type="number"></div><div><label>Ayunas / antes de comer: máx.</label><input id="preMax" type="number"></div></div>
+<div class="row"><div><label>Después de comer: mín.</label><input id="postMin" type="number"></div><div><label>Después de comer: máx.</label><input id="postMax" type="number"></div></div>
+<p class="note">Valores por defecto de referencia general. Ajústalos a las metas que te indique tu médico. Por debajo de 54 o por encima de 300 se marca como urgente. Esta app no sustituye consejo médico.</p>
+</section>
+</main>
+<script>
+const KEY='glucosa_v1';
+let S={entries:[],cfg:{preMin:70,preMax:100,postMin:70,postMax:140}};
+try{const r=localStorage.getItem(KEY);if(r){const p=JSON.parse(r);if(p&&p.entries){S.entries=p.entries;Object.assign(S.cfg,p.cfg||{})}}}catch(e){}
+const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}};
+const $=id=>document.getElementById(id);
+const NAMES={ayunas:'En ayunas',antes:'Antes de comer',despues:'Después de comer',dormir:'Antes de dormir',otro:'Otro'};
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function nowLocal(){const d=new Date();d.setMinutes(d.getMinutes()-d.getTimezoneOffset());return d.toISOString().slice(0,16)}
+function classify(v,ctx){
+ const c=S.cfg,post=ctx==='despues',min=post?c.postMin:c.preMin,max=post?c.postMax:c.preMax;
+ if(v<54)return{k:'lo',crit:true,t:'Muy baja'};
+ if(v>300)return{k:'hi',crit:true,t:'Muy alta'};
+ if(v<min)return{k:'lo',t:'Baja'};
+ if(v>max)return{k:'hi',t:'Alta'};
+ return{k:'ok',t:'Normal'};
+}
+function sorted(){return S.entries.slice().sort((a,b)=>a.t<b.t?1:-1)}
+function render(){
+ const L=sorted(),last=L[0],al=$('alert');
+ if(last){
+  const r=classify(last.v,last.ctx);
+  al.className=r.k;
+  if(r.k==='ok')al.innerHTML='✅ Tu última medición ('+last.v+' mg/dL) está dentro del rango.';
+  else{
+   const msg=r.k==='lo'?'Glucosa baja: ':'Glucosa alta: ';
+   al.innerHTML='⚠️ '+msg+last.v+' mg/dL ('+NAMES[last.ctx].toLowerCase()+').'+
+    '<small>'+(r.crit?'Es un valor de riesgo. Sigue tu plan médico y busca atención si tienes síntomas o no mejora.':
+    r.k==='lo'?'Si tienes síntomas, sigue las indicaciones de tu médico para tratar una bajada de azúcar y vuelve a medir.':'Vuelve a medir más tarde y consulta con tu médico si se repite.')+'</small>';
+  }
+ }else{al.className='';al.innerHTML=''}
+ const wk=L.filter(e=>Date.now()-new Date(e.t)<7*864e5);
+ $('cnt').textContent=wk.length;
+ $('avg').textContent=wk.length?Math.round(wk.reduce((a,e)=>a+e.v,0)/wk.length):'–';
+ $('inr').textContent=wk.length?Math.round(100*wk.filter(e=>classify(e.v,e.ctx).k==='ok').length/wk.length)+'%':'–';
+ $('list').innerHTML=L.length?L.slice(0,40).map(e=>{const r=classify(e.v,e.ctx);
+  return '<div class="item"><div class="v">'+e.v+'</div><div class="m">'+NAMES[e.ctx]+' · '+new Date(e.t).toLocaleString('es',{dateStyle:'medium',timeStyle:'short'})+(e.n?'<br>'+esc(e.n):'')+'</div><span class="b '+r.k+'">'+r.t+'</span><button class="g" data-id="'+e.id+'" aria-label="Eliminar">✕</button></div>'}).join(''):'<p class="note">Aún no hay mediciones.</p>';
+ chart(L.slice(0,20).reverse());
+}
+function chart(P){
+ const s=$('chart');if(P.length<2){s.innerHTML='<text x="300" y="95" text-anchor="middle" fill="currentColor" opacity=".5" font-size="14">Registra al menos 2 mediciones</text>';return}
+ const vs=P.map(p=>p.v),lo=Math.min(50,...vs)-5,hi=Math.max(200,...vs)+5,W=600,H=180,pl=34,pb=10;
+ const x=i=>pl+i*(W-pl-10)/(P.length-1),y=v=>H-pb-(v-lo)/(hi-lo)*(H-pb-10);
+ let g='';[70,100,140,180].forEach(t=>{g+='<line x1="'+pl+'" x2="'+W+'" y1="'+y(t)+'" y2="'+y(t)+'" stroke="var(--bd)"/><text x="2" y="'+(y(t)+4)+'" font-size="11" fill="var(--mu)">'+t+'</text>'});
+ const line=P.map((p,i)=>x(i)+','+y(p.v)).join(' ');
+ const dots=P.map((p,i)=>'<circle cx="'+x(i)+'" cy="'+y(p.v)+'" r="5" fill="var(--'+classify(p.v,p.ctx).k+')"/>').join('');
+ s.innerHTML=g+'<polyline points="'+line+'" fill="none" stroke="var(--ac)" stroke-width="2"/>'+dots;
+}
+$('add').onclick=()=>{
+ const v=parseFloat($('val').value);
+ if(!(v>=10&&v<=800)){$('val').focus();return}
+ S.entries.push({id:Date.now()+''+Math.random().toString(36).slice(2,5),v:Math.round(v),ctx:$('ctx').value,t:$('dt').value||nowLocal(),n:$('nt').value.trim()});
+ save();$('val').value='';$('nt').value='';$('dt').value=nowLocal();render();window.scrollTo({top:0,behavior:'smooth'});
+};
+$('list').onclick=e=>{const id=e.target.dataset&&e.target.dataset.id;if(id&&confirm('¿Eliminar esta medición?')){S.entries=S.entries.filter(x=>x.id!==id);save();render()}};
+['preMin','preMax','postMin','postMax'].forEach(k=>{const el=$(k);el.value=S.cfg[k];el.onchange=()=>{const n=parseFloat(el.value);if(n>0){S.cfg[k]=n;save();render()}else el.value=S.cfg[k]}});
+$('dt').value=nowLocal();render();
+</script>
+</body>
+</html>
